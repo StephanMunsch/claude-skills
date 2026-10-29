@@ -3,16 +3,18 @@ name: meeting-notes
 description: >
   Turn a meeting transcript into structured meeting notes: TL;DR, topic, date, participants,
   key points, decisions, open questions and risks, a task list with owner and due date, and
-  the next meeting. Use when the user has a transcript, recording text, call log or chat
-  export of a meeting and wants a summary, minutes, notes, a protocol or the action items.
+  the next meeting, and on request publish them as a Notion page. Use when the user has a
+  transcript, recording text, call log or chat export of a meeting and wants a summary,
+  minutes, notes, a protocol or the action items.
 when_to_use: >
   Use when the user says "summarize this meeting", "meeting notes", "minutes", "action items
   from this call", "Zusammenfassung vom Meeting", "Protokoll", "Besprechungsnotizen",
   "Transkript zusammenfassen", "was sind die Tasks/ToDos aus dem Meeting", or passes a
   .vtt/.srt/.txt/.md transcript. NOT for summarizing articles, documents, code or
-  email threads that are not a meeting, and NOT for sending notes or creating tickets.
+  email threads that are not a meeting, NOT for sending notes by mail or chat, and NOT for
+  creating tickets.
 argument-hint: "[transcript-file]"
-allowed-tools: Write AskUserQuestion Bash(wc -l:*)
+allowed-tools: Write Edit AskUserQuestion Agent Bash(wc -l:*)
 ---
 
 # Meeting Notes
@@ -27,7 +29,7 @@ Where neither the transcript nor the user settles a point, the notes say so (`op
 |---|---|
 | Ranking | faithfulness to the transcript, then completeness of decisions and tasks, then brevity |
 | Cost | low effort; one pass over the transcript, no research beyond it — except that the whole transcript is always read |
-| Autonomy | always stop and ask the user to confirm the meeting date and the participant list before extracting; ask about every unclear point before writing the notes file; also ask before overwriting an existing notes file, or when no transcript was given |
+| Autonomy | always stop and ask the user to confirm the meeting date and the participant list before extracting; ask about every unclear point before writing the notes file; also ask before overwriting an existing notes file, or when no transcript was given; publish to Notion only on a "yes" in this run, to a target configured or picked by the user, and ask before adding the target line to a project file |
 | On collision | keep the gap visible: `open` beats a guessed owner, `[unclear]` beats a corrected term, a longer task list beats a dropped task — a point the user clarified is no longer a gap |
 
 ## Input Interface
@@ -38,17 +40,23 @@ Where neither the transcript nor the user settles a point, the notes say so (`op
 | meeting date | the transcript, confirmed by the user in Step 2 | yes | the date from the file name, proposed for confirmation | `ask-user` |
 | participants | the transcript, confirmed by the user in Step 2 | yes | none | `ask-user` |
 | notes language | the user's request | no | the transcript's language | use the fallback |
+| Notion MCP server | the session's tool list, including deferred tools listed only by name: Notion tools such as `mcp__<server>__notion-fetch` and `mcp__<server>__notion-create-pages` | only for Step 5 | none | `proceed-degraded`: notes are saved locally only, Step 5 is skipped |
+| Notion target | a `meeting-notes notion target: <url>` line in the project's `AGENTS.md` or `CLAUDE.md` (Step 5) | only when publishing | the user picks from a Notion listing | `ask-user` |
 
 **Preflight:** before Step 1, check that a transcript exists. No path, no pasted transcript → ask for one and stop.
+Then check for the Notion MCP server as the table above describes and record the result: connected, or not connected. It decides whether Step 5 runs; without it the run ends after Step 4 with the local file, which is a complete result, not a failure.
 
 ## Output Interface
 
 | Artefact | Path | Class | Consumer | Criteria manifest | Review priority |
 |---|---|---|---|---|---|
-| meeting notes | chat; plus `<yyyy-mm-dd>_<transcript-basename>-summary.md` beside the transcript when it came from a file | doc | human | no | 3 |
+| meeting notes | chat; plus `<yyyy-mm-dd>_<transcript-basename>-summary.md` beside the transcript file, or `<yyyy-mm-dd>_<topic-slug>-summary.md` in the current working directory for pasted input | doc | human | no | 3 |
+| raw transcript (pasted input only) | `<yyyy-mm-dd>_<topic-slug>-transcript.txt` beside the summary file | doc | human | no | 4 |
+| Notion page | a new row in the target database, or a subpage of the target page; transcript attached | doc | human | no | 3 |
 
 `<yyyy-mm-dd>` is the meeting date the user confirmed in Step 2; `<transcript-basename>` is the transcript's file name without its extension.
 Example: `standup.vtt`, confirmed date 2026-10-28 → `2026-10-28_standup-summary.md`.
+`<topic-slug>` is the topic from the notes' title line, lowercase ASCII, words joined by hyphens. Example: pasted transcript, topic "Sprint Review", date 2026-10-28 → `2026-10-28_sprint-review-summary.md` and `2026-10-28_sprint-review-transcript.txt`.
 
 **Quality Interface:** no review layer is assumed. The user is the reviewer: they confirm date and participants, answer the clarification questions, and the remaining `open` / `[unclear]` / `proposed` markers show where to look.
 
@@ -56,7 +64,7 @@ The invocation `/meeting-notes <file>` is self-describing and the skill reads no
 
 ## Process
 
-Work through the four steps in order and check each step's **Done when** line before starting the next; each step needs the previous one's result.
+Work through the five steps in order and check each step's **Done when** line before starting the next; each step needs the previous one's result.
 
 ### Step 1: Read the whole transcript
 
@@ -150,16 +158,38 @@ Every heading appears; a section with nothing in the transcript holds one line, 
 Drop the `Source` column when the transcript has no timestamps.
 
 - **Transcript came from a file:** save the notes as `<yyyy-mm-dd>_<transcript-basename>-summary.md` in the transcript's directory (see Output Interface). First try to `Read` that path: an error means it is free. When it exists, ask with `AskUserQuestion` whether to overwrite it or to save under a new name.
-- **Transcript was pasted:** show the notes in the chat only, and offer to save them at the end of the reply.
+- **Transcript was pasted:** the raw input exists only in this conversation, so keep it beside its notes: save the pasted text verbatim as `<yyyy-mm-dd>_<topic-slug>-transcript.txt` and the notes as `<yyyy-mm-dd>_<topic-slug>-summary.md`, both in the current working directory (see Output Interface). Check both paths the same way; when either exists, ask once whether to overwrite or to save under a new name.
 
 <HARD-GATE>
-Before `Write`: date and participants were confirmed in Step 2, every point collected in Step 3 was asked, and the target path does not exist or the user chose "overwrite" for it in this conversation. Without all three, the notes stay in the chat.
+Before `Write`: date and participants were confirmed in Step 2, every point collected in Step 3 was asked, and each target path does not exist or the user chose "overwrite" for it in this conversation. Without all three, the notes stay in the chat.
 </HARD-GATE>
 
-**Done when:** the notes carry the title line with the confirmed date, the TL;DR and all seven `##` sections of the template, and the file is saved under the `yyyy-mm-dd_…-summary.md` name (file input) or the save offer is made (pasted input).
+**Done when:** the notes carry the title line with the confirmed date, the TL;DR and all seven `##` sections of the template, and the summary file is saved under its `yyyy-mm-dd_…-summary.md` name; for pasted input, the transcript file is saved beside it with the pasted text unchanged.
+
+### Step 5: Offer publishing to Notion
+
+A published page is visible to everyone with access to the target, so it happens only on an explicit "yes" in this run, after the notes are final. You handle everything that needs the user; a subagent does the publishing, because it cannot ask questions and its Notion tool output would otherwise flood this conversation.
+
+1. **Notion prerequisite:** when the preflight recorded the Notion MCP server as not connected, say in the chat "No Notion MCP server found — skipping the Notion publishing step; the notes are saved locally only.", do not ask the publish question, and go to Reporting.
+2. **Read the configured target:** `Read` `AGENTS.md` and `CLAUDE.md` in the project root and look for a line `meeting-notes notion target: <url>`. Missing files and zero matches are valid results; with several lines, name all of them as options in the next question.
+3. **Ask with one `AskUserQuestion`:** "Publish these notes to Notion?" Options: `Yes, to <configured target>` (only when a line was found), `Yes, choose a destination`, `No`. On `No`, go to Reporting.
+4. **Resolve the destination** when none is configured or the user chose `Yes, choose a destination`:
+   1. List the teamspaces with the Notion teams tool, leaving out those in the trash. Ask which one, up to four options; "Other" takes a pasted Notion URL.
+   2. Search that teamspace for databases and pages that fit meeting notes: query "meeting", "minutes", and the notes language's words for them (German: "Protokoll", "Besprechung"). Ask which one, up to four candidates, databases first, each labelled with its type and path. With zero candidates, say so and offer the teamspace's top-level pages or a pasted URL.
+   3. Offer once, with `AskUserQuestion`, to append `meeting-notes notion target: <url>` to `AGENTS.md`, or to `CLAUDE.md` when only that exists. Create neither file.
+5. **Dispatch the publisher** with the `Agent` tool (general-purpose). Its prompt carries: "Read `${CLAUDE_SKILL_DIR}/references/notion-publishing.md` and follow it", the target URL, the summary file path, the transcript file path (for pasted input, the transcript file saved in Step 4), and the notes language. Wait for its result.
+6. **Verify the page:** take the URL from the reply's `PUBLISHED <url>` line and fetch that page with the Notion fetch tool; when the fetch fails, report the URL as unverified. When the reply carries no URL, search Notion for the page title before dispatching again; a second dispatch without that search can create a duplicate page.
+
+<HARD-GATE>
+Before dispatching: the user answered `Yes` in this run, and the target is either the configured line named in that question or a destination the user picked in this run.
+</HARD-GATE>
+
+**Done when:** the user answered `No`, or the step was skipped because Notion is not connected, or the published page was fetched and its URL is in hand, or a failure was reported with the publisher's `FAILED` line.
+**Process not correct when:** the page URL was reported from the subagent's reply without fetching the page.
 
 ## Reporting
 
-Lead with the outcome in one line: where the notes were saved (or that they are chat-only), how many tasks they contain, and how many of those have an `open` owner or due date.
+Lead with the outcome in one line: where the notes were saved (and, for pasted input, the transcript file beside them), how many tasks they contain, and how many of those have an `open` owner or due date.
+When published, add the Notion page link and whether the transcript is attached; when publishing failed, say which step failed; when no Notion MCP server is connected, say in one line that the notes were saved locally only and that connecting a Notion MCP server enables publishing.
 Then show the full notes.
 End with the items the user left open: `[unclear]` terms, `proposed` tasks, and `open` owners or dates — or nothing, if there are none.
