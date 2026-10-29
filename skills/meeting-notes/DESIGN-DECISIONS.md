@@ -19,8 +19,18 @@ A section with nothing in the transcript prints one line saying so instead of be
 
 ## Output location: chat, plus a file next to the transcript
 
-When the transcript is a file, notes go to `<transcript-basename>-notes.md` in the same directory and are shown in the chat. Pasted transcripts produce chat output only, with an offer to save.
-**Closed by:** user decision, 2026-10-26.
+When the transcript is a file, notes go to `<yyyy-mm-dd>_<transcript-basename>-summary.md` in the same directory and are shown in the chat. The date is the meeting date the user confirmed. Pasted transcripts produce chat output only, with an offer to save.
+**Closed by:** user decision, 2026-10-26; file name changed from `<transcript-basename>-notes.md` by user decision, 2026-10-29.
+
+## Date and participants are confirmed by the user before extraction
+
+The skill shows the date it found (with its source) and the participant list, and asks for confirmation in one `AskUserQuestion` call. Nothing is extracted or written before both answers.
+**Closed by:** user decision, 2026-10-29.
+
+## Unclear points are asked before the notes file is written
+
+Garbled terms, ambiguous owners or due dates, decision-vs-proposal doubts and passages whose meaning is unclear are put to the user, up to four per `AskUserQuestion` call. A user answer counts as a source alongside the transcript; points the user leaves open keep their marker. This supersedes the earlier "save without asking" autonomy.
+**Closed by:** user decision, 2026-10-29.
 
 ## Language follows the transcript
 
@@ -28,7 +38,7 @@ When the transcript is a file, notes go to `<transcript-basename>-notes.md` in t
 
 ## Deployment range: Claude Code only
 
-The skill may use Claude Code features (AskUserQuestion for the overwrite question).
+The skill may use Claude Code features (AskUserQuestion for the confirmation, clarification and overwrite questions).
 **Closed by:** user decision, 2026-10-26.
 
 ## Profile standalone, role capability-generator
@@ -43,5 +53,5 @@ Reading a transcript and writing notes is judgement work; no step would be writt
 
 ## No process tracker
 
-The skill has three short sequential steps in one turn; the steps are listed in order in SKILL.md and need no separate tracker.
+The skill has four short sequential steps; the steps are listed in order in SKILL.md and need no separate tracker.
 **Closed by:** writer analysis, 2026-10-26. ARTEFACT_QUALITY-CRITERION-09 is satisfied by the numbered step order the skill text names as its checklist.

@@ -15,12 +15,14 @@ The notes answer four questions for a reader who was not there: what was it abou
   A task whose owner or due date was not stated carries the marker `open` (German notes: `offen`), never a guessed name or date.
 - **Decisions are kept apart from proposals.** Something counts as a decision only where the transcript shows agreement or a final call.
   A suggestion nobody confirmed lands in open questions, or as a task marked `proposed`.
-- **Speaker labels are not turned into names by guessing.** "Speaker 1" stays "Speaker 1" unless the transcript itself ties the label to a name.
-  A name taken from the transcript that way is marked as inferred.
+- **Date and participants are confirmed first.** Before anything is extracted, the skill shows the meeting date it found and the participant list, and asks the user to confirm or correct both.
+  Speaker labels are not turned into names by guessing: "Speaker 1" stays "Speaker 1" unless the transcript ties it to a name or the user names it.
+- **Unclear points are asked, not guessed.** Garbled terms, ambiguous owners or due dates, and statements that may be a decision or only a proposal are put to the user before the notes file is written.
+  Whatever the user leaves open keeps its marker (`open`, `[unclear]`, `proposed`).
 - **The whole transcript is read.** Notes from the first half of a long transcript are a defect, not a summary.
 - **The notes are written in the transcript's language**, unless the user asks for another one.
 - **Output location:** the notes always appear in the chat.
-  When the transcript came from a file, they are also saved as `<transcript-name>-notes.md` next to it.
+  When the transcript came from a file, they are also saved as `<yyyy-mm-dd>_<transcript-name>-summary.md` next to it, using the confirmed meeting date (e.g. `2026-10-28_standup-summary.md`).
   An existing file of that name is not overwritten without asking.
 
 ## Audience and assumptions
@@ -36,8 +38,8 @@ The notes answer four questions for a reader who was not there: what was it abou
 - **Does it send the notes anywhere — mail, Slack, Confluence, Jira?** No. Publishing is an outward-facing act the user decides on separately. The notes stay in the chat and in the local file.
 - **Does it create tickets from the tasks?** No, for the same reason: a ticket is a commitment in another system. The task table is shaped so it can be copied into one.
 - **Does it judge the meeting — was it productive, who talked too much?** No. The notes report what was said, not an assessment of the people saying it.
-- **Does it fill in missing owners or dates from context or common sense?** No. A guessed owner is worse than an `open` one, because nobody notices it is wrong.
-- **Does it fix transcription errors by guessing what was meant?** No. A term that looks garbled is kept and marked `[unclear]`. A silent correction would make an error look like a fact.
+- **Does it fill in missing owners or dates from context or common sense?** No. It asks the user; what the user cannot settle stays `open`. A guessed owner is worse than an `open` one, because nobody notices it is wrong.
+- **Does it fix transcription errors by guessing what was meant?** No. It asks the user about a term that looks garbled; without an answer the term is kept and marked `[unclear]`. A silent correction would make an error look like a fact.
 
 ## Where the implementation lives
 
