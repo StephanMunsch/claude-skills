@@ -62,6 +62,11 @@ The Input Interface lists the Notion MCP server as an optional dependency, and t
 The Notion MCP tool names carry the server's connection name as a prefix (`mcp__<server>__notion-…`), which differs between setups. The skill names the tools by function, and the permission prompts on first use are acceptable for an outward-facing action.
 **Closed by:** writer analysis, 2026-10-29.
 
+## Notes carry an AI-generated banner
+
+The summary file has a fixed banner directly under the title (`> 🤖 **AI-generated:** …`, translated into the notes language), and the Notion page shows the same text as a 🤖 callout as its first block. The banner says the notes may contain errors and points readers to the raw transcript, so they do not build on the notes unchecked.
+**Closed by:** user decision, 2026-11-09; follows the team proposal of 2026-11-04 to mark AI-generated artifacts.
+
 ## Language follows the transcript
 
 **Closed by:** user decision, 2026-10-26.
